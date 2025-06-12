@@ -8,7 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var maxDigits = 150
+var MaxValue = big.NewInt(1_000_000_000_000_000) // หนึ่งพันล้านล้าน
 var digitWords = []string{"", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"}
 var unitWords = []string{"", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน"}
 
@@ -16,7 +16,7 @@ func numberToThaiText(n *big.Int) string {
 	numStr := fmt.Sprintf("%d", n)
 
 	/*
-		Pad the string to handle "ล้าน" in the Thai numeric spelling behavior.
+		Pad the string to handle "ล้าน" in Thai numeric spelling behavior.
 		numStr = "100000000" // 100,000,000
 		padded = "000100000000" // 000,100,000,000
 	*/
@@ -32,6 +32,11 @@ func numberToThaiText(n *big.Int) string {
 		group := padded[i*6 : (i+1)*6]
 		groupValue := convertGroup(strings.TrimLeft(group, "0"))
 		if groupValue != "" {
+			/*
+				Example:
+				- 1,000,000 -> "หนึ่งร้อยล้าน" (groupCount = 2)
+				- 1,000,000,000,000 -> "หนึ่งล้านล้าน" (groupCount = 3)
+			*/
 			for j := 0; j < groupCount-i-1; j++ {
 				groupValue += "ล้าน"
 			}
@@ -69,25 +74,35 @@ func convertGroup(group string) string {
 }
 
 func DecimalToBahtText(in decimal.Decimal) (string, error) {
-	if len(in.BigInt().String()) > maxDigits {
-		return "", fmt.Errorf("number too large to convert (%d digits > %d allowed)", len(in.String()), maxDigits)
+	if in.GreaterThan(decimal.NewFromBigInt(MaxValue, 0)) {
+		return "", fmt.Errorf("number too large to convert (must not exceed %s)", MaxValue.String())
 	}
+	if in.IsNegative() {
+		return "", fmt.Errorf("negative numbers are not supported")
+	}
+
+	fracPart := in.Mod(decimal.NewFromInt(1)) // e.g., 1234.56 -> 0.56
+	fracDigits := -fracPart.Exponent()        // Get number of decimal digits (e.g., 0.56 has exponent -2, so fracDigits = 2)
+	if fracDigits > 2 {
+		return "", fmt.Errorf("only 2 decimal places are supported, got %d", fracDigits)
+	}
+
 	if in.IsZero() {
 		return "ศูนย์บาทถ้วน", nil
 	}
 
-	intPart := in.BigInt()
-	fracPart := in.Mod(decimal.NewFromInt(1)).Mul(decimal.NewFromInt(100)).BigInt()
+	intPart := in.BigInt()                                   // e.g., 1234.56 -> 1234
+	satang := fracPart.Mul(decimal.NewFromInt(100)).BigInt() // e.g., 0.56 -> 56
 
 	text := numberToThaiText(intPart)
 	if text != "" {
 		text += "บาท"
 	}
 
-	if fracPart.Cmp(big.NewInt(0)) == 0 {
+	if satang.Cmp(big.NewInt(0)) == 0 {
 		text += "ถ้วน"
 	} else {
-		text += numberToThaiText(fracPart) + "สตางค์"
+		text += numberToThaiText(satang) + "สตางค์"
 	}
 
 	return text, nil

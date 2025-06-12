@@ -1,76 +1,99 @@
 package utils_test
 
 import (
+	"errors"
+	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/Chayakorn2002/thb-amount-to-text-go/utils"
 	"github.com/shopspring/decimal"
 )
 
+type testCase struct {
+	input         string
+	expectedText  string
+	expectedError error
+}
+
 func TestDecimalToBahtText(t *testing.T) {
-	tests := map[string]string{
+	tests := []testCase{
 		// Zero & leading
-		"0":       "ศูนย์บาทถ้วน",
-		"0.0":     "ศูนย์บาทถ้วน",
-		"0000":    "ศูนย์บาทถ้วน",
-		"0001":    "หนึ่งบาทถ้วน",
-		"0000.50": "ห้าสิบสตางค์",
+		{strconv.Itoa(0), "ศูนย์บาทถ้วน", nil},
+		{decimal.NewFromFloat(0.0).String(), "ศูนย์บาทถ้วน", nil},
+		{strconv.Itoa(0000), "ศูนย์บาทถ้วน", nil},
+		{strconv.Itoa(0001), "หนึ่งบาทถ้วน", nil},
+		{decimal.NewFromFloat(0000.50).String(), "ห้าสิบสตางค์", nil},
 
 		// Satang only
-		"0.01": "หนึ่งสตางค์",
-		"0.04": "สี่สตางค์",
-		"0.05": "ห้าสตางค์",
-		"0.10": "สิบสตางค์",
-		"0.25": "ยี่สิบห้าสตางค์",
-		"0.50": "ห้าสิบสตางค์",
-		"0.99": "เก้าสิบเก้าสตางค์",
-
-		// Round up/down
-		// "0.999": "เก้าสิบเก้าสตางค์",   // rounds down
-		// "1.005": "หนึ่งบาทหนึ่งสตางค์", // rounds up
+		{decimal.NewFromFloat(0.01).String(), "หนึ่งสตางค์", nil},
+		{decimal.NewFromFloat(0.04).String(), "สี่สตางค์", nil},
+		{decimal.NewFromFloat(0.05).String(), "ห้าสตางค์", nil},
+		{decimal.NewFromFloat(0.10).String(), "สิบสตางค์", nil},
+		{decimal.NewFromFloat(0.25).String(), "ยี่สิบห้าสตางค์", nil},
+		{decimal.NewFromFloat(0.50).String(), "ห้าสิบสตางค์", nil},
+		{decimal.NewFromFloat(0.99).String(), "เก้าสิบเก้าสตางค์", nil},
 
 		// Baht + Satang
-		"1.01":   "หนึ่งบาทหนึ่งสตางค์",
-		"11.10":  "สิบเอ็ดบาทสิบสตางค์",
-		"99.99":  "เก้าสิบเก้าบาทเก้าสิบเก้าสตางค์",
-		"123.01": "หนึ่งร้อยยี่สิบสามบาทหนึ่งสตางค์",
+		{decimal.NewFromFloat(1.01).String(), "หนึ่งบาทหนึ่งสตางค์", nil},
+		{decimal.NewFromFloat(11.10).String(), "สิบเอ็ดบาทสิบสตางค์", nil},
+		{decimal.NewFromFloat(99.99).String(), "เก้าสิบเก้าบาทเก้าสิบเก้าสตางค์", nil},
+		{decimal.NewFromFloat(123.01).String(), "หนึ่งร้อยยี่สิบสามบาทหนึ่งสตางค์", nil},
 
 		// Integer only
-		"1":    "หนึ่งบาทถ้วน",
-		"10":   "สิบบาทถ้วน",
-		"11":   "สิบเอ็ดบาทถ้วน",
-		"21":   "ยี่สิบเอ็ดบาทถ้วน",
-		"101":  "หนึ่งร้อยหนึ่งบาทถ้วน",
-		"1001": "หนึ่งพันหนึ่งบาทถ้วน",
-		"2001": "สองพันหนึ่งบาทถ้วน",
+		{strconv.Itoa(1), "หนึ่งบาทถ้วน", nil},
+		{strconv.Itoa(10), "สิบบาทถ้วน", nil},
+		{strconv.Itoa(11), "สิบเอ็ดบาทถ้วน", nil},
+		{strconv.Itoa(21), "ยี่สิบเอ็ดบาทถ้วน", nil},
+		{strconv.Itoa(101), "หนึ่งร้อยหนึ่งบาทถ้วน", nil},
+		{strconv.Itoa(1_001), "หนึ่งพันหนึ่งบาทถ้วน", nil},
+		{strconv.Itoa(2_001), "สองพันหนึ่งบาทถ้วน", nil},
 
 		// Large numbers
-		"123456":        "หนึ่งแสนสองหมื่นสามพันสี่ร้อยห้าสิบหกบาทถ้วน",
-		"1000000":       "หนึ่งล้านบาทถ้วน",
-		"2000000":       "สองล้านบาทถ้วน",
-		"2100000":       "สองล้านหนึ่งแสนบาทถ้วน",
-		"123456789":     "หนึ่งร้อยยี่สิบสามล้านสี่แสนห้าหมื่นหกพันเจ็ดร้อยแปดสิบเก้าบาทถ้วน",
-		"123456789.50":  "หนึ่งร้อยยี่สิบสามล้านสี่แสนห้าหมื่นหกพันเจ็ดร้อยแปดสิบเก้าบาทห้าสิบสตางค์",
-		"1000000000":    "หนึ่งพันล้านบาทถ้วน",
-		"1000000000000": "หนึ่งล้านล้านบาทถ้วน",
-		"9000000000000": "เก้าล้านล้านบาทถ้วน",
+		{strconv.Itoa(123_456), "หนึ่งแสนสองหมื่นสามพันสี่ร้อยห้าสิบหกบาทถ้วน", nil},
+		{strconv.Itoa(1_000_000), "หนึ่งล้านบาทถ้วน", nil},
+		{strconv.Itoa(2_000_000), "สองล้านบาทถ้วน", nil},
+		{strconv.Itoa(2_100_000), "สองล้านหนึ่งแสนบาทถ้วน", nil},
+		{strconv.Itoa(123_456_789), "หนึ่งร้อยยี่สิบสามล้านสี่แสนห้าหมื่นหกพันเจ็ดร้อยแปดสิบเก้าบาทถ้วน", nil},
+		{decimal.NewFromFloat(123_456_789.50).String(), "หนึ่งร้อยยี่สิบสามล้านสี่แสนห้าหมื่นหกพันเจ็ดร้อยแปดสิบเก้าบาทห้าสิบสตางค์", nil},
+		{strconv.Itoa(1_000_000_000), "หนึ่งพันล้านบาทถ้วน", nil},
+		{strconv.Itoa(1_000_000_000_000), "หนึ่งล้านล้านบาทถ้วน", nil},
+		{strconv.Itoa(9_000_000_000_000), "เก้าล้านล้านบาทถ้วน", nil},
+		{strconv.Itoa(999_999_999_999_999), "เก้าร้อยเก้าสิบเก้าล้านล้านเก้าแสนเก้าหมื่นเก้าพันเก้าร้อยเก้าสิบเก้าล้านเก้าแสนเก้าหมื่นเก้าพันเก้าร้อยเก้าสิบเก้าบาทถ้วน", nil},
+		{strconv.Itoa(1_000_000_000_000_000), "หนึ่งพันล้านล้านบาทถ้วน", nil},
+
+		// Error cases
+		{decimal.NewFromFloat(0.001).String(), "", errors.New("only 2 decimal places are supported, got 3")},
+		{decimal.NewFromFloat(123.456).String(), "", errors.New("only 2 decimal places are supported, got 3")},
+		{decimal.NewFromFloat(-1.00).String(), "", errors.New("negative numbers are not supported")},
+		{strconv.Itoa(1_000_000_000_000_001), "", fmt.Errorf("number too large to convert (must not exceed %s)", utils.MaxValue.String())},
 	}
 
-	for input, expected := range tests {
-		val, err := decimal.NewFromString(input)
+	for _, tc := range tests {
+		val, err := decimal.NewFromString(tc.input)
 		if err != nil {
-			t.Errorf("error parsing input %q: %v", input, err)
+			t.Errorf("Failed to parse input %q: %v", tc.input, err)
 			continue
 		}
 
 		output, err := utils.DecimalToBahtText(val)
-		if err != nil {
-			t.Errorf("DecimalToBahtText(%q) returned error: %v", input, err)
+
+		if tc.expectedError != nil {
+			if err == nil {
+				t.Errorf("Expected error for input %q but got none", tc.input)
+			} else if err.Error() != tc.expectedError.Error() {
+				t.Errorf("Expected error %q for input %q but got %q", tc.expectedError.Error(), tc.input, err.Error())
+			}
 			continue
 		}
 
-		if output != expected {
-			t.Errorf("DecimalToBahtText(%q) = %q; want %q", input, output, expected)
+		if err != nil {
+			t.Errorf("Unexpected error for input %q: %v", tc.input, err)
+			continue
+		}
+
+		if output != tc.expectedText {
+			t.Errorf("DecimalToBahtText(%q) = %q; want %q", tc.input, output, tc.expectedText)
 		}
 	}
 }
