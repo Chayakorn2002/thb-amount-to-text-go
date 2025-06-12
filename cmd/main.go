@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/chayakorn2002/thb-amount-to-text-go/utils"
+	"github.com/Chayakorn2002/thb-amount-to-text-go/utils"
 	"github.com/shopspring/decimal"
 )
 

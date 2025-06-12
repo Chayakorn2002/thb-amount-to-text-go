@@ -1,4 +1,4 @@
-module github.com/chayakorn2002/thb-amount-to-text-go
+module github.com/Chayakorn2002/thb-amount-to-text-go
 
 go 1.24.1
 

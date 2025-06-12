@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/chayakorn2002/thb-amount-to-text-go/dto"
-	"github.com/chayakorn2002/thb-amount-to-text-go/services"
+	"github.com/Chayakorn2002/thb-amount-to-text-go/dto"
+	"github.com/Chayakorn2002/thb-amount-to-text-go/services"
 	"github.com/cnc-csku/task-nexus-go-lib/jsonvalidator"
 	"github.com/labstack/echo/v4"
 )

@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"github.com/chayakorn2002/thb-amount-to-text-go/dto"
-	"github.com/chayakorn2002/thb-amount-to-text-go/utils"
+	"github.com/Chayakorn2002/thb-amount-to-text-go/dto"
+	"github.com/Chayakorn2002/thb-amount-to-text-go/utils"
 	"github.com/shopspring/decimal"
 )
 
